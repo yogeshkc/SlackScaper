@@ -1,7 +1,13 @@
-import json
 import os
+from datetime import date
+from dateutil.relativedelta import relativedelta
+import time
+
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+
+PAGINATION_LIMIT = 100
+TIME_PERIOD_MONTHS = int(os.getenv("TIME_PERIOD_MONTHS"))
 
 
 class Message:
@@ -33,7 +39,7 @@ def parse_messages(msgs):
 participationMap = {}
 
 
-def find_participation(messageList):
+def update_participation(messageList):
     for msg in messageList:
         user = msg.user()
         replyUsers = msg.reply_users()
@@ -53,11 +59,22 @@ if __name__ == '__main__':
     client = WebClient(token=os.getenv("SLACK_BOT_TOKEN"))
 
     try:
-        response = client.conversations_history(channel=channel, limit=10)
-        messages = parse_messages(response["messages"])
-        find_participation(messages)
+        oldestTs = date.today() + relativedelta(months=-TIME_PERIOD_MONTHS)
+        cursor = ""
+        while True:
+            response = client.conversations_history(channel=channel, oldest=str(time.mktime(oldestTs.timetuple())),
+                                                    limit=PAGINATION_LIMIT, cursor=cursor)
+            messages = parse_messages(response["messages"])
+            update_participation(messages)
+            if "response_metadata" in response and "next_cursor" in response["response_metadata"]:
+                cursor = response["response_metadata"]["next_cursor"]
+            else:
+                # at end of list
+                break
         for w in sorted(participationMap, key=participationMap.get, reverse=True):
             print(w, participationMap[w])
+            # user_name = client.users_info(user=w)
+            # print(user_name)
     except SlackApiError as e:
         # You will get a SlackApiError if "ok" is False
         assert e.response["ok"] is False
