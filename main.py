@@ -1,6 +1,8 @@
 import os
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from prettytable import PrettyTable
+from alive_progress import alive_bar
 import time
 
 from slack_sdk import WebClient
@@ -58,6 +60,7 @@ if __name__ == '__main__':
 
     client = WebClient(token=os.getenv("SLACK_BOT_TOKEN"))
 
+    print("Calculating User Participation...")
     try:
         oldestTs = date.today() + relativedelta(months=-TIME_PERIOD_MONTHS)
         cursor = ""
@@ -71,10 +74,22 @@ if __name__ == '__main__':
             else:
                 # at end of list
                 break
-        for w in sorted(participationMap, key=participationMap.get, reverse=True):
-            print(w, participationMap[w])
-            # user_name = client.users_info(user=w)
-            # print(user_name)
+
+        total_users = len(participationMap)
+        print("Calculated User Participation!")
+        print("Mapping UserId to User Names. Total users in channel = %d" % total_users)
+        t = PrettyTable(['User', 'Score'])
+        with alive_bar(total_users) as bar:
+            for w in sorted(participationMap, key=participationMap.get, reverse=True):
+                score = participationMap[w]
+                if score > 0:
+                    try:
+                        user_name = client.users_info(user=w)["user"]["name"]
+                        t.add_row([user_name, score])
+                    except SlackApiError as e:
+                        print("Could not get user %s: %s" % (w,  e.response["error"]))
+                bar()
+        print(t)
     except SlackApiError as e:
         # You will get a SlackApiError if "ok" is False
         assert e.response["ok"] is False
