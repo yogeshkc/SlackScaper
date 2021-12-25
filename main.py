@@ -8,7 +8,7 @@ import time
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 
-PAGINATION_LIMIT = 100
+PAGINATION_LIMIT = 50
 TIME_PERIOD_MONTHS = int(os.getenv("TIME_PERIOD_MONTHS"))
 
 
@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     client = WebClient(token=os.getenv("SLACK_BOT_TOKEN"))
 
-    print("Calculating User Participation...")
+    print("Calculating User Participation for past %d months" % TIME_PERIOD_MONTHS )
     try:
         oldestTs = date.today() + relativedelta(months=-TIME_PERIOD_MONTHS)
         cursor = ""
