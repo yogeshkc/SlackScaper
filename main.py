@@ -17,7 +17,9 @@ class Message:
         self.msg = msgStr
 
     def user(self):
-        return self.msg["user"]
+        if "user" in self.msg:
+            return self.msg["user"]
+        return ""
 
     def thread_ts(self):
         return self.msg["thread_ts"]
